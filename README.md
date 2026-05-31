@@ -7,7 +7,7 @@
 [![Opacus 1.4](https://img.shields.io/badge/Opacus-1.4-red)](https://opacus.ai)
 
 > **FMBM-Net: A Federated Multi-Scale Bio-Multimodal Network with Latent Cross-Attention Transformer for Privacy-Preserving Biomedical AI**  
-> Subrahmanyam Tanala (ANITS, Visakhapatnam) · Surender Reddy Salkuti (Woosong University, South Korea)  
+> Subrahmanyam Tanala (ANITS, Visakhapatnam)  
 > *IEEE Transactions on Biomedical Engineering*, Vol. 73, No. 6, June 2026
 
 ---
@@ -105,7 +105,7 @@ Pre-processed splits and feature files are provided in [`data/splits/`](data/spl
 
 ```bibtex
 @article{tanala2026fmbmnet,
-  author  = {Tanala, Subrahmanyam and Salkuti, Surender Reddy},
+  author  = {Tanala, Subrahmanyam},
   title   = {{FMBM-Net}: A Federated Multi-Scale Bio-Multimodal Network with
              Latent Cross-Attention Transformer for Privacy-Preserving Biomedical {AI}},
   journal = {IEEE Trans.\ Biomed.\ Eng.},
@@ -125,7 +125,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ## Contact
 
 - **Subrahmanyam Tanala** — tanala.subrahmanyam@anits.edu.in — ANITS, Visakhapatnam, India  
-- **Surender Reddy Salkuti** — surender@wsu.ac.kr — Woosong University, South Korea
 
 
 ---
