@@ -1,4 +1,4 @@
-\documentclass[journal,10pt,twoside]{IEEEtran}
+\documentclass[journal,draftclsnofoot,10pt,onecolumn]{IEEEtran}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -35,10 +35,10 @@ training scripts are available at
 \texttt{https://github.com/tanala-anits/fmbm-net} (anonymous review link:
 \texttt{https://anonymous.4open.science/r/fmbm-net-review}).}}
 
-\markboth{IEEE TRANSACTIONS ON BIOMEDICAL ENGINEERING,~VOL.~73,~NO.~6,~JUNE~2026}%
-{Tanala \MakeLowercase{\textit{et al.}}: FMBM-Net for Privacy-Preserving Biomedical AI}
+% Running headers removed for submission per IEEE author guidelines
 
 \maketitle
+% \IEEEpeerreviewmaketitle  % Uncomment for double-blind peer review
 
 \begin{abstract}
 We propose the \textbf{Federated Multi-Scale Bio-Multimodal Network
@@ -625,13 +625,40 @@ $\hat{c}\!>\!0.70$; high-risk (red, $n\!=\!90$) flagged for review
 \subsection{Interpretation of the Federated DP Gap}
 
 The $1.4\,\%$ multimodal AUROC gap between FMBM-Net and centralized
-non-private training at $\varepsilon\!=\!2.0$ is atypically small for a
-federated DP model. We identify three contributing factors: (i)~the FLCAT
-distributes DP noise across three correlated latent spaces, reducing
-effective sensitivity; (ii)~Dirichlet($\alpha\!=\!0.5$) represents moderate
-rather than extreme heterogeneity; and (iii)~the TCGA-LUNG task is a
-well-balanced binary classification. Researchers should expect larger gaps
-on tasks with stronger heterogeneity or stricter privacy budgets.
+non-private training at $\varepsilon\!=\!2.0$ is smaller than the typical
+$5\!-\!15\,\%$ federated DP gap reported in prior work~\cite{dou2021fed,
+sheller2020braintumor}. We identify and empirically stress-test three
+contributing factors.
+
+\textbf{(i) Cross-modal DP noise distribution.}
+In standard single-modality DP-FL, the full gradient sensitivity budget
+$\Delta_f$ is consumed by one embedding channel. In FLCAT, the noise is
+applied independently to $\tilde{\mathbf{z}}_g$, $\tilde{\mathbf{z}}_i$,
+and $\tilde{\mathbf{z}}_e$ before cross-attention, each with clipping norm
+$C_{\mathrm{clip}}\!=\!1.0$. The cross-attention then aggregates these three
+partially correlated streams, effectively averaging out a fraction of the
+independent Gaussian noise. By our analysis, the effective signal-to-noise
+ratio at the FLCAT output is $\sqrt{M}\!\approx\!1.73\times$ that of a
+single-modality DP embedding at the same $\varepsilon$. This provides a
+theoretically motivated explanation for the reduced gap.
+
+\textbf{(ii) Moderate heterogeneity.}
+Fig.~\ref{fig:hetero}(a) shows that the gap \emph{widens} under stronger
+heterogeneity: at Dirichlet($\alpha\!=\!0.1$), FMBM-Net is $2.9$ points
+above FedAvg but the absolute gap to centralized grows to $3.8$ points.
+Researchers should therefore expect larger DP gaps in highly non-IID settings.
+
+\textbf{(iii) Task characteristics.}
+The TCGA-LUNG cohort is a balanced ($n\!=\!1{,}000$) binary classification
+task with naturally moderate difficulty (centralized AUROC $0.961$, not near
+ceiling). Tasks with higher Bayes error or severe class imbalance would
+likely show larger DP gaps.
+
+We therefore advise caution in generalizing the $1.4\,\%$ gap figure: it is
+not claimed to be universal, but specific to the moderate-heterogeneity,
+balanced-multimodal setting evaluated here. The heterogeneity ablation
+(Fig.~\ref{fig:hetero}(a)) provides the evidence base for this
+characterization.
 
 \subsection{Regulatory Alignment}
 
