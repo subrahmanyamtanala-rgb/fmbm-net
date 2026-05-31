@@ -134,7 +134,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 > **Manuscript version:** Submission draft (IEEE `draftclsnofoot`, single-column, 13 pages)  
 > **Target journal:** IEEE Transactions on Biomedical Engineering (TBME)  
 > **Status:** Under preparation for submission, May 2026  
-> **Anonymous review link:** https://anonymous.4open.science/r/fmbm-net-review
+> **Anonymous review link:** https://anonymous.4open.science/r/fmbm-net-2A21
 
 ### Submission Checklist
 - [x] 10-seed statistical analysis with bootstrap 95% CI
