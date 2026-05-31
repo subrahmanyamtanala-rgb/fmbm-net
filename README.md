@@ -126,3 +126,26 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 - **Subrahmanyam Tanala** — tanala.subrahmanyam@anits.edu.in — ANITS, Visakhapatnam, India  
 - **Surender Reddy Salkuti** — surender@wsu.ac.kr — Woosong University, South Korea
+
+
+---
+
+## Submission Status
+
+> **Manuscript version:** Submission draft (IEEE `draftclsnofoot`, single-column, 13 pages)  
+> **Target journal:** IEEE Transactions on Biomedical Engineering (TBME)  
+> **Status:** Under preparation for submission, May 2026  
+> **Anonymous review link:** https://anonymous.4open.science/r/fmbm-net-review
+
+### Submission Checklist
+- [x] 10-seed statistical analysis with bootstrap 95% CI
+- [x] Wilcoxon signed-rank tests + Cohen's *d* effect sizes  
+- [x] TCGA-LUNG dataset construction fully documented (§V-B)
+- [x] Complete FLCAT mathematical specification (Eqs. 3–8)
+- [x] Data heterogeneity + client dropout robustness experiments
+- [x] Quantitative XAI evaluation (GradCAM++ IoU + expert agreement)
+- [x] DP gap theoretically motivated (cross-modal SNR analysis)
+- [x] Submission header (`draftclsnofoot`) — no implied publication date
+- [x] Reproducible figures + compile script in this repository
+- [ ] External validation cohort (planned: two-site clinical study)
+- [ ] Real multi-site deployment (planned: future work)
