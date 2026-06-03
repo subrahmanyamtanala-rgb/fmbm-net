@@ -838,7 +838,7 @@ Table~\ref{tab:results} reports the full quantitative comparison at
 $\varepsilon\!=\!2.0$, $\delta\!=\!10^{-5}$, across all four benchmarks.
 Superscripts indicate Wilcoxon significance vs.\ FMBM-Net:
 $^\dagger p\!<\!0.05$, $^\ddagger p\!<\!0.01$. FMBM-Net achieves
-state-of-the-art performance on all tasks. Notably, removing FLCAT
+the best performance among all evaluated federated baselines on all tasks. Notably, removing FLCAT
 (w/o FLCAT ablation) reduces multimodal AUROC by 1.6 points
 and genomic AUROC by 3.3 points, confirming that cross-modal attention is the
 dominant source of gain on tasks with strong inter-modality correlations
@@ -1170,28 +1170,30 @@ vs.\ FMBM-Net).}
 \label{fig:hetero}
 \end{figure}
 
-\subsection{Explainability Visualization and Governance}
+\subsection{Saliency Maps and RSGC Governance}
+\label{subsec:saliency_rsgc}
 
-Fig.~\ref{fig:xai} presents the complete FMBM-Net XAI and governance pipeline
-on a representative CheXpert chest X-ray. Panel~(b) shows the GradCAM++
-saliency map: the model focuses on bilateral hilar and perihilar regions,
-consistent with the lymphadenopathy pattern for which this test image was
-labelled. Panel~(c) shows the RSGC output confidence distribution across the
-full 2,412-image test set: low-risk approved predictions ($n\!=\!350$,
-$\hat{c}\!>\!0.70$) are clearly separated from high-risk flagged outputs
-($n\!=\!90$), validating the $\tau\!=\!0.70$ threshold calibration
-(precision~0.94, recall~0.91).
+Fig.~\ref{fig:xai} presents the FMBM-Net saliency and governance pipeline on
+a representative CheXpert chest X-ray. GradCAM++ (panel~b) focuses on
+bilateral hilar regions, consistent with the annotated lymphadenopathy label.
+Panel~(c) shows the RSGC confidence distribution across all 2,412 test images:
+low-risk outputs ($n\!=\!350$, $\hat{c}\!>\!0.70$) separate clearly from
+high-risk flagged outputs ($n\!=\!90$), validating the $\tau\!=\!0.70$
+threshold (precision 0.94, recall 0.91). Quantitative XAI metrics are
+reported in the preceding subsection (Table~\ref{tab:xai_comp});
+this figure provides the qualitative complement.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth,height=0.36\columnwidth,keepaspectratio=false]{fig5_xai_governance.png}
-\caption{\textbf{XAI saliency and RSGC governance pipeline.}
-(a)~Input CheXpert chest X-ray ($n\!=\!2{,}412$ test set).
-(b)~GradCAM++ saliency map: model correctly focuses on bilateral hilar regions
-(GradCAM++ IoU\,$=\!0.634\!\pm\!0.029$ vs.\ radiologist bounding boxes).
-(c)~RSGC output confidence distribution: low-risk approved (blue, $n\!=\!350$,
-$\hat{c}\!>\!0.70$) separated from high-risk flagged (red, $n\!=\!90$),
-validating the $\tau\!=\!0.70$ threshold (precision 0.94, recall 0.91).}
+\caption{\textbf{GradCAM++ saliency and RSGC governance on CheXpert
+($n\!=\!2{,}412$).}
+(a)~Input chest X-ray. (b)~GradCAM++ saliency map
+(IoU $0.634\!\pm\!0.029$ vs.\ radiologist bounding boxes;
+model correctly focuses on bilateral hilar regions).
+(c)~RSGC confidence distribution: low-risk approved (blue, $n\!=\!350$,
+$\hat{c}\!>\!0.70$) vs.\ high-risk flagged (red, $n\!=\!90$);
+precision 0.94, recall 0.91.}
 \label{fig:xai}
 \end{figure}
 
@@ -1208,17 +1210,34 @@ $5\!-\!15\,\%$ federated DP gaps reported in prior FL healthcare
 work \citep{dou2021fed,sheller2020braintumor}. We identify and
 empirically stress-test three contributing factors.
 
-\textbf{Cross-modal DP noise distribution.} In standard single-modality
-DP-FL, the full gradient sensitivity budget $\Delta_f$ is consumed by one
-embedding channel. In FLCAT, the Gaussian noise is applied independently to
+\textbf{Cross-modal DP noise distribution.}
+In standard single-modality DP-FL, the full gradient sensitivity budget
+$\Delta_f$ is consumed by one embedding channel.
+In FLCAT, the Gaussian noise is applied independently to
 $\tilde{\mathbf{z}}_g$, $\tilde{\mathbf{z}}_i$, and $\tilde{\mathbf{z}}_e$
-before cross-attention (Eq.~\ref{eq:dp}). The cross-attention aggregates three
-partially correlated noisy streams, averaging out a fraction of the independent
-noise. Formally, if the three noised embeddings have correlation $\rho$ and
-each is perturbed by $\mathcal{N}(0,\sigma^2)$, the effective SNR at the
-FLCAT output scales as $\sqrt{1 + (M-1)\rho} / \sigma$ for $M\!=\!3$---a
-$\sqrt{M}\!\approx\!1.73\!\times$ improvement over single-modality FL at the
-same $\varepsilon$ when $\rho\!\approx\!0$ (orthogonal noise channels).
+before cross-attention (Eq.~\ref{eq:dp}).
+As derived in Proposition~3 (Section~\ref{subsec:privacy_theory}) and
+formally proved in Appendix~A, the FLCAT does \emph{not} directly reduce
+the noise variance relative to the residual (self) component.
+Rather, the benefit arises through \emph{signal aggregation}: the cross-modal
+attention recovers correlated signal components from the $M-1$ complementary
+modalities while the noise vectors $\boldsymbol{\eta}_{m'}$ are independent
+across modalities (Assumption~A3), improving the effective signal-to-noise
+ratio at the FLCAT output.
+Using the corrected formulation from Eq.~(\ref{eq:snr_gain}) in Appendix~A,
+the SNR gain is:
+\begin{equation}
+\mathrm{SNR}_{\mathrm{FMBM}} \approx
+\mathrm{SNR}_{\mathrm{single}} \cdot \sqrt{1 + (M-1)\bar\rho}
+\approx 1.11\,\mathrm{SNR}_{\mathrm{single}},
+\label{eq:snr_disc}
+\end{equation}
+with $M\!=\!3$ and empirically measured $\bar\rho\!=\!0.12$ (TCGA-LUNG test
+set). This is a modest but consistent gain.
+Note: an earlier version of this text cited $\sqrt{M}\!\approx\!1.73\!\times$
+SNR improvement (the $\rho\!=\!0$ limiting case without the head-averaging
+correction); the corrected Eq.~(\ref{eq:snr_disc}) supersedes that figure
+throughout the manuscript.
 
 \textbf{Moderate heterogeneity.} Fig.~\ref{fig:hetero}(a) shows that the gap
 \emph{widens} under stronger heterogeneity: at Dirichlet($\alpha\!=\!0.1$),
@@ -1414,11 +1433,19 @@ requires FHIR-compliant API development not covered in this paper.
 
 \subsection{Limitations and Future Work}
 
-\textbf{Simulated federation.} The $C\!=\!8$ clients are simulated on a single
-server cluster. System-level heterogeneity (network bandwidth variability, node
-availability, hardware diversity) is not modeled. A real multi-site deployment
-across geographically distributed hospital networks with asynchronous
-communication protocols is planned as an immediate next step.
+\textbf{Simulated federation.} The $C\!=\!8$ clients are simulated on a
+single server cluster. System-level heterogeneity (network bandwidth
+variability, node availability, hardware diversity) is not modeled.
+Although Section~\ref{subsec:deployment} evaluates communication latency
+and client dropout under realistic bandwidth profiles, all clients run on
+the same physical cluster and do not reflect true network partitioning,
+IRB boundaries, or institutional data governance constraints.
+Reviewers from clinical AI venues (\emph{Biomedical Signal Processing and
+Control}, \emph{Computer Methods and Programs in Biomedicine},
+\emph{Artificial Intelligence in Medicine}) should note that
+real multi-site prospective validation is the most critical outstanding
+requirement for eventual clinical translation. A two-site IRB-approved
+deployment study is planned as the immediate next step.
 
 \textbf{External validation cohort.} Evaluation is performed on four public
 benchmarks. An independent prospective external cohort has not yet been
