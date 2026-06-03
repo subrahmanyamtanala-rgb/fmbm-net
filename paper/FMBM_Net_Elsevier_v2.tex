@@ -12,6 +12,7 @@
 \usepackage{lineno}
 
 \graphicspath{{./}}
+\setlength{\emergencystretch}{3em}
 
 %% ─── Running headers ─────────────────────────────────────────────────────────
 \shorttitle{FMBM-Net: Federated Multi-Scale Bio-Multimodal Network}
@@ -56,7 +57,9 @@ Engineering, Anil Neerukonda Institute of Technology and Sciences (ANITS)},
 
 %% ─── Abstract ────────────────────────────────────────────────────────────────
 \begin{highlights}
-\item FMBM-Net federates genomic, imaging, and EHR modalities under a single $(\varepsilon,\delta)$-DP pipeline.
+\pdfbookmark[0]{Highlights}{highlights}
+\sloppy
+\item FMBM-Net federates genomic, imaging, and EHR modalities under a single \texorpdfstring{$(\varepsilon,\delta)$}{(epsilon,delta)}-DP pipeline.
 \item The novel FLCAT performs cross-modal attention in differentially-private latent space without raw data sharing.
 \item Boundary-guided Region Uncertainty Estimation (RUE) suppresses noisy CT/MRI annotation effects during FL.
 \item 10-seed bootstrap evaluation across four public benchmarks; all gains statistically significant ($p<0.01$).
@@ -263,7 +266,8 @@ Gov = governance controller.}
 \label{tab:gap}
 \centering
 \renewcommand{\arraystretch}{1.15}
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{2.5pt}
+\footnotesize
 \begin{tabular}{lccccccc}
 \toprule
 \textbf{Method} & \textbf{FL} & \textbf{DP} & \textbf{G} & \textbf{I} & \textbf{E}
@@ -433,9 +437,9 @@ cross-modal reasoning as follows.
 complementary modality $m'$ ($m\!\neq\!m'$), the $i$-th attention head
 computes:
 \begin{equation}
-\mathbf{Q}_m^{(i)} \!=\! \tilde{\mathbf{z}}_m \mathbf{W}_Q^{(m,i)},\;\;
-\mathbf{K}_{m'}^{(i)} \!=\! \tilde{\mathbf{z}}_{m'}\mathbf{W}_K^{(m',i)},\;\;
-\mathbf{V}_{m'}^{(i)} \!=\! \tilde{\mathbf{z}}_{m'}\mathbf{W}_V^{(m',i)},
+\mathbf{Q}_m^{(i)} = \tilde{\mathbf{z}}_m \mathbf{W}_Q^{(m,i)},\;
+\mathbf{K}_{m'}^{(i)} = \tilde{\mathbf{z}}_{m'}\mathbf{W}_K^{(m',i)},\;
+\mathbf{V}_{m'}^{(i)} = \tilde{\mathbf{z}}_{m'}\mathbf{W}_V^{(m',i)},
 \label{eq:proj}
 \end{equation}
 where $\mathbf{W}_Q^{(m,i)}, \mathbf{W}_K^{(m',i)},
@@ -510,14 +514,12 @@ Every FMBM-Net output passes through the RSGC before reaching the clinical
 interface. The controller maps output confidence $\hat{c}\!\in\![0,1]$ to one
 of four risk states:
 \begin{equation}
-s =
-\begin{cases}
-s_1\;\text{(informational)}     & \hat{c}\geq\tau_3\\
-s_2\;\text{(decision-support)}  & \tau_2\leq\hat{c}<\tau_3\\
-s_3\;\text{(recommendation)}    & \tau_1\leq\hat{c}<\tau_2\\
-s_4\;\text{(autonomous action)} & \hat{c}<\tau_1
-\end{cases},\quad
-\tau_1\!=\!0.50,\;\tau_2\!=\!0.65,\;\tau_3\!=\!0.80,
+s = \begin{cases}
+s_1 & \hat{c}\geq\tau_3\;(\text{informational})\\
+s_2 & \tau_2\leq\hat{c}<\tau_3\;(\text{decision-support})\\
+s_3 & \tau_1\leq\hat{c}<\tau_2\;(\text{recommendation})\\
+s_4 & \hat{c}<\tau_1\;(\text{autonomous})
+\end{cases}
 \label{eq:rsgc}
 \end{equation}
 calibrated against the four-tier BMJ framework \citep{bmj_governance_2026}.
@@ -765,6 +767,15 @@ residual blocks, dilation $\{1,4,16\}$, channels~128. FLCAT: $H\!=\!8$,
 $d_k\!=\!d_v\!=\!64$, 2 stacked layers. MoE: $N\!=\!8$, top-$k\!=\!2$,
 load-balance coefficient $10^{-2}$. DP: $C_{\mathrm{clip}}\!=\!1.0$,
 $\sigma\!=\!1.1$. Framework: PyTorch~2.3.0, Opacus~1.4, Python~3.11.
+
+\noindent\textbf{AI-Assisted Tools Disclosure.}
+In accordance with BSPC editorial policy on generative AI, we disclose that
+portions of this manuscript were drafted with the assistance of Claude
+(Anthropic, claude-sonnet-4-6, 2026), then critically reviewed and
+substantially revised by the author. All experimental design, mathematical
+derivations, and numerical results are the sole intellectual contribution of
+the author. No AI image-generation tools were used. The author accepts full
+responsibility for the accuracy and integrity of this work.
 
 \subsection{Federated Convergence and Privacy--Utility Tradeoff}
 
@@ -1021,7 +1032,7 @@ prior work that evaluates saliency methods on annotated imaging benchmarks
 separately from the primary classification or segmentation benchmark
 \citep{bhatt2020evaluating,chattopadhay2018gradcampp}. We additionally evaluate
 FMBM-Net on TCGA-LUNG test patches (attention map analysis) in
-Section~\ref{subsec:xai_merged}.
+Section~\ref{subsec:xai_expanded}.
 
 We benchmark five XAI methods on 2,412 CheXpert test images against
 radiologist-provided bounding boxes (three board-certified radiologists,
@@ -1053,19 +1064,20 @@ test images; mean\,$\pm$\,std over 3 radiologist annotators).}
 \centering
 \renewcommand{\arraystretch}{1.15}
 \setlength{\tabcolsep}{5pt}
-\begin{tabular}{lccr}
+\footnotesize
+\begin{tabular}{lccp{1.4cm}}
 \toprule
-\textbf{Method} & \textbf{IoU $\uparrow$} & \textbf{Faithfulness $\uparrow$} & \textbf{Runtime (ms)}\\
+\textbf{Method} & \textbf{IoU $\uparrow$} & \textbf{Faith. $\uparrow$} & \textbf{RT (ms)}\\
 \midrule
-GradCAM++ \citep{chattopadhay2018gradcampp}
+GradCAM++~\citep{chattopadhay2018gradcampp}
   & $\mathbf{0.634\!\pm\!0.029}$ & $\mathbf{0.821\!\pm\!0.022}$ & \textbf{12.3}\\
-Integrated Gradients \citep{sundararajan2017ig}
+Int.\ Gradients~\citep{sundararajan2017ig}
   & $0.612\!\pm\!0.031$          & $0.814\!\pm\!0.024$          & 38.6\\
-SHAP \citep{lundberg2017shap}
+SHAP~\citep{lundberg2017shap}
   & $0.598\!\pm\!0.034$          & $0.793\!\pm\!0.027$          & 487.2\\
-Attention Rollout \citep{abnar2020rollout}
+Att.\ Rollout~\citep{abnar2020rollout}
   & $0.571\!\pm\!0.038$          & $0.752\!\pm\!0.031$          & 8.9\\
-LIME \citep{ribeiro2016lime}
+LIME~\citep{ribeiro2016lime}
   & $0.487\!\pm\!0.045$          & $0.698\!\pm\!0.038$          & 1{,}240.5\\
 \bottomrule
 \end{tabular}
@@ -1083,7 +1095,7 @@ $p\!<\!0.001$), confirming convergent validity across attribution paradigms.}
 \end{figure}
 
 Following \citet{bhatt2020evaluating} and \citet{samek2021explaining}, we
-evaluate GradCAM++ \citep{chattopadhay2018gradcampp} saliency maps on 2,412
+evaluate GradCAM++~\citep{chattopadhay2018gradcampp} saliency maps on 2,412
 CheXpert chest X-ray test images with radiologist-provided bounding boxes
 (three board-certified radiologists, majority-vote ground truth).
 FMBM-Net achieves GradCAM++ IoU $0.634\!\pm\!0.029$ and expert agreement
@@ -1237,7 +1249,8 @@ illustrative purposes only.}
 \centering
 \renewcommand{\arraystretch}{1.25}
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{p{1.8cm}p{3.8cm}p{3.8cm}p{1.6cm}p{3.8cm}}
+\small
+\begin{tabular}{p{1.7cm}p{3.6cm}p{3.6cm}p{1.6cm}p{3.7cm}}
 \toprule
 \textbf{Case} & \textbf{Modality inputs} & \textbf{FMBM-Net output} & \textbf{Risk tier} & \textbf{Governance action}\\
 \midrule
@@ -1336,10 +1349,11 @@ Ethics Principles. HO = human oversight required; AT = audit trail required.}
 \label{tab:governance}
 \centering
 \renewcommand{\arraystretch}{1.15}
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lcccc}
+\setlength{\tabcolsep}{2pt}
+\footnotesize
+\begin{tabular}{p{1.6cm}p{1.6cm}p{1.5cm}p{1.6cm}c}
 \toprule
-\textbf{RSGC State} & \textbf{EU AI Act} & \textbf{HIPAA} & \textbf{WHO Principle} & \textbf{HO / AT}\\
+\textbf{RSGC State} & \textbf{EU AI Act} & \textbf{HIPAA} & \textbf{WHO Principle} & \textbf{HO/AT}\\
 \midrule
 $s_1$ Informational  & Minimal risk   & No PHI AT req.  & Transparency     & No / No\\
 $s_2$ Decision-supp. & Limited risk   & Soft AT req.    & Accountability   & No / Yes\\
@@ -1610,7 +1624,7 @@ $\mathrm{MHA}(\cdot,\cdot)$ & Multi-head cross-attention (Eq.~\ref{eq:mha})\\
 
 %% =============================================================================
 \section{Future Research Directions}
-\label{sec:future}
+
 %% =============================================================================
 
 Building on FMBM-Net, we identify six concrete research directions.
@@ -1635,14 +1649,14 @@ Benchmark evaluation on TCGA-LUNG, MSD, MIMIC-IV, and CADD is insufficient for c
 
 %% =============================================================================
 \section{Notation}
-\label{sec:notation}
+
 %% =============================================================================
 
 Table~\ref{tab:notation} summarizes the principal notation used throughout the paper.
 
 \begin{table}[!t]
 \caption{\textbf{Principal notation summary.}}
-\label{tab:notation}
+
 \centering
 \renewcommand{\arraystretch}{1.15}
 \setlength{\tabcolsep}{4pt}
@@ -1694,7 +1708,7 @@ $0.76\!\pm\!0.03$ at $\varepsilon\!=\!2.0$, $\delta\!=\!10^{-5}$, with all
 improvements over MOON statistically significant
 ($p\!<\!0.01$; Cohen's $d\!\geq\!1.2$). The 1.4\,\% AUROC gap to centralized
 non-private training is theoretically and empirically explained by the FLCAT's
-cross-modal DP noise averaging (Eq.~\ref{eq:noise_avg}).
+cross-modal DP noise averaging (Eq.~\ref{eq:noise_bound}).
 
 \textbf{Key takeaways for practitioners:}
 (i)~Cross-modal attention in the federated setting provides a meaningful
@@ -1704,7 +1718,7 @@ segmentation ($+3.4$ Dice points, $p\!<\!0.01$, Cohen's $d\!=\!3.1$) and
 should be adopted even in non-federated settings. (iii)~The RSGC provides a
 zero-overhead governance mechanism that can be retrofitted to any
 confidence-aware medical AI model. (iv)~The privacy-amplifying effect of
-cross-modal noise averaging (Eq.~\ref{eq:noise_avg}) suggests that multimodal
+cross-modal noise averaging (Eq.~\ref{eq:noise_bound}) suggests that multimodal
 DP models may systematically outperform unimodal DP models at equivalent
 privacy budgets, a finding with broad implications for federated medical AI.
 
@@ -1727,6 +1741,8 @@ MIMIC-IV under a signed Data Use Agreement.
 
 %% =============================================================================
 \appendix
+\small
+\hfuzz=10pt
 \section{Proof of Proposition~3: Cross-Modal Noise Reduction Bound}
 \label{app:proof}
 %% =============================================================================
