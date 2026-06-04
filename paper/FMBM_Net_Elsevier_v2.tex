@@ -1173,15 +1173,16 @@ vs.\ FMBM-Net).}
 \subsection{Saliency Maps and RSGC Governance}
 \label{subsec:saliency_rsgc}
 
-Fig.~\ref{fig:xai} presents the FMBM-Net saliency and governance pipeline on
-a representative CheXpert chest X-ray. GradCAM++ (panel~b) focuses on
-bilateral hilar regions, consistent with the annotated lymphadenopathy label.
-Panel~(c) shows the RSGC confidence distribution across all 2,412 test images:
-low-risk outputs ($n\!=\!350$, $\hat{c}\!>\!0.70$) separate clearly from
-high-risk flagged outputs ($n\!=\!90$), validating the $\tau\!=\!0.70$
-threshold (precision 0.94, recall 0.91). Quantitative XAI metrics are
-reported in the preceding subsection (Table~\ref{tab:xai_comp});
-this figure provides the qualitative complement.
+Fig.~\ref{fig:xai} provides the qualitative complement to the
+quantitative results in Table~\ref{tab:xai}.
+The GradCAM++ saliency map (panel~b) focuses on bilateral hilar and
+perihilar regions, consistent with the radiologist-annotated
+lymphadenopathy label---confirming that the model attends to
+clinically plausible anatomy rather than imaging artefacts.
+Panel~(c) shows the RSGC output confidence distribution: the bimodal
+separation between approved low-risk and flagged high-risk outputs
+confirms that the calibrated threshold $\tau\!=\!0.70$ is appropriate
+for this imaging task.
 
 \begin{figure}[!t]
 \centering
@@ -1445,7 +1446,13 @@ Control}, \emph{Computer Methods and Programs in Biomedicine},
 \emph{Artificial Intelligence in Medicine}) should note that
 real multi-site prospective validation is the most critical outstanding
 requirement for eventual clinical translation. A two-site IRB-approved
-deployment study is planned as the immediate next step.
+prospective deployment study---with genuine network partitioning,
+institutional data governance agreements, and real patient cohorts---is
+planned as the immediate next step and is a prerequisite before
+FMBM-Net can be considered for clinical translation.
+Readers should therefore interpret the deployment results
+(Section~\ref{subsec:deployment}) as a computational proof-of-concept
+rather than an operational validation.
 
 \textbf{External validation cohort.} Evaluation is performed on four public
 benchmarks. An independent prospective external cohort has not yet been
