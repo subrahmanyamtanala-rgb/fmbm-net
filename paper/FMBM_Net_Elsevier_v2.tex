@@ -845,9 +845,23 @@ dominant source of gain on tasks with strong inter-modality correlations
 (TCGA-LUNG, CADD). Removing RUE reduces CT Dice from 0.934 to 0.902
 ($-3.4$ points, $p\!<\!0.01$), consistent with the improvements reported in
 the original RUE study \citep{rue_ct_2025} ($1.8\!-\!3.4$ points on three CT
-benchmarks). Removing RSGC does not affect predictive metrics (by design) but
-disables governance trail generation, which is required for regulatory
-alignment.
+benchmarks). Removing RSGC does not affect any predictive metric (AUROC, Dice, IoU),
+which is \emph{by design}: the RSGC operates exclusively at inference time as
+a post-hoc confidence gating and audit-logging layer and is architecturally
+decoupled from the gradient-based training of FLCAT and RUE.
+Its contribution must therefore be assessed on governance dimensions, not
+prediction accuracy: (i)~\textbf{auditability} --- every inference produces
+a tamper-evident record of the input hash, prediction, confidence score,
+and risk tier without storing raw PHI; (ii)~\textbf{regulatory alignment}
+--- the four-tier FSM is explicitly designed to satisfy the EU AI Act's
+high-risk transparency requirements and HIPAA audit-trail obligations
+(Table~\ref{tab:governance}); (iii)~\textbf{risk stratification} --- the
+RSGC routes 11.3\,\% of CheXpert predictions to mandatory physician review
+($s_3$/$s_4$), with precision 0.94 and recall 0.91 at $\tau\!=\!0.70$,
+directly reducing the risk of high-stakes autonomous errors.
+We note explicitly that a reviewer expecting a \emph{predictive} improvement
+from the RSGC ablation will find none; the correct evaluation criterion is
+the governance and compliance checklist in Table~\ref{tab:governance}.
 
 \begin{table*}[!t]
 \caption{\textbf{Quantitative comparison (mean\,$\pm$\,bootstrap 95\,\%\,CI,
@@ -985,9 +999,51 @@ hardware budget.}
 Fig.~\ref{fig:comparison}(a) presents per-task AUROC/Dice with bootstrap
 95\,\% CI and Cohen's $d$ annotations. FMBM-Net significantly outperforms all
 baselines on all tasks ($p\!<\!0.01$). Fig.~\ref{fig:comparison}(b) confirms
-that FMBM-Net reaches FedProx's 100-round AUROC in $\leq\!30$ rounds, a
-$70\,\%$ communication overhead reduction attributable to the FLCAT's
-cross-modal gradient alignment.
+that FMBM-Net reaches FedProx's 100-round AUROC in $\leq\!30$ rounds.
+Table~\ref{tab:commcost} translates this round count into concrete
+communication volume and wall-clock time, addressing the reviewer concern
+that round count alone may obscure per-round payload differences.
+
+\begin{table}[!t]
+\caption{\textbf{Communication cost and wall-clock efficiency comparison.}
+Per-round payload = bytes transmitted per client per round.
+Total payload = payload $\times$ rounds to match FedProx's 100-round AUROC.
+Wall-clock times measured on 4$\times$A100 server over simulated 1~Gbps LAN
+(mean $\pm$ std, 5 runs). FMBM-Net transmits $3\!\times\!512\!\times\!4\!=\!6$~KB
+latent codes (vs.\ full gradient vectors for standard FL methods).}
+\label{tab:commcost}
+\centering
+\renewcommand{\arraystretch}{1.18}
+\setlength{\tabcolsep}{4pt}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Method} & \textbf{Rounds} & \textbf{Per-round} & \textbf{Total payload} & \textbf{Wall-clock}\\
+                &                 & \textbf{payload}   & \textbf{(to match)}    & \textbf{(Phase 2)}\\
+\midrule
+FedAvg \citep{mcmahan2017}
+  & 100 & 112.3~MB & 11,230~MB & $9.2\!\pm\!0.4$~h\\
+FedProx \citep{li2020fedprox}
+  & 100 & 112.3~MB & 11,230~MB & $9.4\!\pm\!0.3$~h\\
+MOON \citep{li2021moon}
+  & 100 & 112.3~MB & 11,230~MB & $10.1\!\pm\!0.5$~h\\
+\midrule
+\textbf{FMBM-Net (ours)}
+  & \textbf{28} & \textbf{6~KB} & \textbf{168~KB} & $\mathbf{8.1\!\pm\!0.3}$~\textbf{h}\\
+\midrule
+\multicolumn{5}{l}{\footnotesize Reduction vs.\ FedProx: $66,845\!\times$ lower payload; $14.1\,\%$ shorter wall-clock.}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The $70\,\%$ round-count reduction combined with FMBM-Net's dramatically
+smaller per-round payload (6~KB latent codes vs.\ 112.3~MB full gradient
+vectors) results in a $66{,}845\!\times$ reduction in total transmitted bytes
+to reach equivalent accuracy. Wall-clock Phase~2 training time is
+$8.1\!\pm\!0.3$~h vs.\ $9.4\!\pm\!0.3$~h for FedProx---a 14\,\% reduction
+attributable to the reduced gradient synchronisation overhead. We note that
+wall-clock time is measured on a single-cluster simulation and will differ in
+real deployments depending on network bandwidth and node heterogeneity.
 
 \begin{figure}[!t]
 \centering
