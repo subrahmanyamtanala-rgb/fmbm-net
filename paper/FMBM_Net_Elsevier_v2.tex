@@ -922,26 +922,39 @@ MOON \citep{li2021moon}
 \end{tabular}
 \end{table*}
 
-\subsection{Missing Modality Robustness}
+\subsection{Modality Contribution and Missing-Modality Robustness}
 \label{subsec:missing}
 
-A clinically important failure mode is the unavailability of one or more input
-modalities at inference time (e.g., genomic data not yet processed, imaging
-unavailable due to scanner downtime). Table~\ref{tab:missing} and
-Fig.~\ref{fig:missing} evaluate FMBM-Net under all seven single/paired/complete
-modality combinations on TCGA-LUNG with zero-masking of absent modalities
-($\mathbf{z}_m\!=\!\mathbf{0}$, same as the zero-vector sentinel used during
-training to simulate missing data with probability $p_{\mathrm{miss}}\!=\!0.1$).
+We evaluate FMBM-Net under all seven single, paired, and complete modality
+combinations on TCGA-LUNG (Table~\ref{tab:missing}, Fig.~\ref{fig:missing}).
+This single experiment serves two complementary purposes.
 
-The genomic modality provides the largest marginal contribution
-($\Delta\!=\!0.041$ AUROC when removed), followed by imaging ($\Delta\!=\!0.038$)
-and EHR ($\Delta\!=\!0.026$), confirming that KRAS/STK11/EGFR mutation status
-provides strong discriminative signal for LUAD/LUSC classification
-beyond morphological and clinical features.
+\textbf{Modality contribution analysis.}
+Reading Table~\ref{tab:missing} from the bottom up reveals the marginal value
+of each modality: removing genomics reduces AUROC by $0.041$ points
+(the largest single-modality contribution), imaging by $0.038$, and EHR by
+$0.026$, confirming that KRAS/STK11/EGFR mutation status provides strong
+discriminative signal beyond morphological and clinical features alone.
+Critically, the full G+I+E combination ($0.947\!\pm\!0.007$) exceeds the best
+pairwise combination G+I ($0.921\!\pm\!0.009$) by 2.6 points.
+This improvement beyond any pairwise combination suggests meaningful
+cross-modal complementarity enabled by the FLCAT fusion, rather than
+information redundancy across modalities.
+
+\textbf{Missing-modality robustness.}
+Reading Table~\ref{tab:missing} from the top down quantifies FMBM-Net's
+graceful degradation under clinically realistic unavailability scenarios (e.g.,
+genomic data not yet processed, imaging unavailable due to scanner downtime).
+Absent modalities are handled via zero-masking
+($\mathbf{z}_m\!=\!\mathbf{0}$, using the same zero-vector sentinel applied
+during training with dropout probability $p_{\mathrm{miss}}\!=\!0.1$).
+Even with only two modalities available, FMBM-Net achieves AUROC $\geq\!0.906$,
+remaining significantly above any single-modality baseline.
 
 \begin{table}[!t]
-\caption{\textbf{Missing modality analysis on TCGA-LUNG.} G=Genomic, I=Imaging,
-E=EHR. Mean $\pm$ bootstrap 95\,\%\,CI, 10 seeds, $\varepsilon\!=\!2.0$.}
+\caption{\textbf{Modality contribution and missing-modality robustness
+(TCGA-LUNG).} G=Genomic, I=Imaging, E=EHR. Mean $\pm$ bootstrap 95\,\%\,CI,
+10 seeds, $\varepsilon\!=\!2.0$. $\Delta$ = AUROC gap vs.\ full G+I+E.}
 \label{tab:missing}
 \centering
 \renewcommand{\arraystretch}{1.15}
@@ -963,10 +976,11 @@ I + E               & $0.906\!\pm\!0.011$ & $-0.041$\\
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth,height=0.40\columnwidth,keepaspectratio=false]{fig_missing_modal.png}
-\caption{\textbf{Missing modality robustness on TCGA-LUNG.}
-(a)~AUROC across all 7 modality combinations (bootstrap 95\,\%\,CI, 10 seeds).
-(b)~Marginal contribution of each modality (AUROC drop when removed from full G+I+E input).
-Genomic mutation features provide the largest individual contribution ($-0.041$).}
+\caption{\textbf{Modality contribution and missing-modality robustness
+(TCGA-LUNG, $\varepsilon\!=\!2.0$, 10 seeds).}
+(a)~AUROC across all 7 modality combinations (bootstrap 95\,\%\,CI).
+(b)~AUROC drop when each modality is removed from the full G+I+E input.
+The genomic modality provides the largest marginal contribution ($-0.041$).}
 \label{fig:missing}
 \end{figure}
 
@@ -1160,43 +1174,7 @@ Cohen's $d\!>\!2.0$; Fig.~\ref{fig:hetero}(c)). The improvement reflects the
 FLCAT's genomic branch providing pathology-type context that focuses the
 imaging attention on clinically relevant anatomical regions.
 
-\subsection{Per-Modality Ablation and Contribution Analysis}
 
-To understand the contribution of each input modality to the multimodal
-AUROC, we conduct a systematic leave-one-modality-out analysis on TCGA-LUNG.
-Table~\ref{tab:modality_ablation} reports results at $\varepsilon\!=\!2.0$,
-10 seeds. The genomic modality contributes the largest marginal gain
-($\Delta\!=\!+4.1$ points when added to imaging+EHR), confirming that KRAS,
-STK11, and EGFR mutation status provides strong discriminative signal for
-LUAD/LUSC classification that is not captured by morphological or clinical
-features alone. The imaging modality provides the second-largest gain
-($\Delta\!=\!+3.2$ points), while EHR contributes $\Delta\!=\!+1.8$ points.
-The super-additive gain of $0.947$ vs.\ the sum of unimodal contributions
-($0.891\!+\!0.026$) demonstrates genuine cross-modal complementarity captured
-by the FLCAT fusion, not merely feature concatenation.
-
-\begin{table}[!t]
-\caption{\textbf{Leave-one-modality-out ablation on TCGA-LUNG.}
-Mean $\pm$ bootstrap 95\,\% CI, 10 seeds, $\varepsilon\!=\!2.0$.}
-\label{tab:modality_ablation}
-\centering
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Input Modalities} & \textbf{AUROC} & \textbf{$\Delta$ vs.\ all-3}\\
-\midrule
-Genomic only       & $0.847\!\pm\!0.014$ & $-0.100$\\
-Imaging only       & $0.831\!\pm\!0.016$ & $-0.116$\\
-EHR only           & $0.779\!\pm\!0.018$ & $-0.168$\\
-\midrule
-Genomic + Imaging  & $0.921\!\pm\!0.009$ & $-0.026$\\
-Genomic + EHR      & $0.909\!\pm\!0.010$ & $-0.038$\\
-Imaging + EHR      & $0.906\!\pm\!0.011$ & $-0.041$\\
-\midrule
-\textbf{All three (FMBM-Net)} & $\mathbf{0.947\!\pm\!0.007}$ & ---\\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsection{Sensitivity to DP Hyperparameters}
 
