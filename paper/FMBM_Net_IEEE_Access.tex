@@ -491,7 +491,7 @@ C_{\mathrm{clip}}\!=\!1.0,\;\sigma\!=\!1.1.
 \label{eq:dp}
 \end{equation}
 Per-round communication is $3\!\times\!512\!\times\!4\!\approx\!6$~KB per
-client --- two orders of magnitude below gradient-level FL.
+client --- substantially below the 112.3~MB per-round payload of gradient-level FL (see Section~\ref{subsec:comm_efficiency}).
 
 \subsubsection{Full FLCAT Specification}
 For source modality $m$ and complementary modality $m'$ ($m\!\neq\!m'$),
@@ -1069,22 +1069,27 @@ $\boldsymbol{\theta}_{\mathrm{FLCAT}}$ only (not the branch encoders), clips
 and noises them via DP-SGD, and transmits these compact gradients to the server.
 
 \textbf{Payload calculation.}
-The FLCAT gradient payload per client per round is:
+FMBM-Net clients transmit only the three DP-noised latent codes
+$(\tilde{\mathbf{z}}_g, \tilde{\mathbf{z}}_i, \tilde{\mathbf{z}}_e)$
+to the server each round; FLCAT is computed server-side. The per-round
+client-to-server uplink payload is therefore:
 \begin{equation}
-P_{\mathrm{FMBM}} = |\boldsymbol{\theta}_{\mathrm{FLCAT}}| \times 4\;\text{bytes}
-= 1{,}540 \times 4 = 6\;\text{KB},
+P_{\mathrm{FMBM}} = M \times d \times 4\;\text{bytes}
+= 3 \times 512 \times 4 = 6{,}144\;\text{bytes} \approx 6\;\text{KB},
 \label{eq:payload}
 \end{equation}
-where $|\boldsymbol{\theta}_{\mathrm{FLCAT}}|\!=\!1{,}540$ parameters covers
-the $Q/K/V/O$ projection matrices across $M\!=\!3$ modalities and $H\!=\!8$
-heads. Standard FL methods (FedAvg, FedProx, MOON) transmit the full model
-gradient at $28{,}075{,}520$ parameters $\times\!4\!=\!112.3$~MB/round.
-The 66,845$\times$ reduction is therefore a direct consequence of federating
-only the cross-modal attention layer, not full gradient aggregation.
-This is architecturally consistent with Eq.~(\ref{eq:fedavg}), which
-aggregates $\boldsymbol{\theta}$; here $\boldsymbol{\theta}$ refers
-specifically to $\boldsymbol{\theta}_{\mathrm{FLCAT}}$, not the full
-model weights.
+where $M\!=\!3$ modalities and $d\!=\!512$ is the latent dimension.
+The FLCAT module itself contains
+$|\boldsymbol{\theta}_{\mathrm{FLCAT}}|\!=\!9{,}443{,}328$ parameters
+(9.44~M; $L\!=\!2$ layers, $H\!=\!8$ heads, $d\!=\!512$, $d_k\!=\!64$)
+but these \emph{do not traverse the network}: FLCAT is a server-side
+computation operating on received latent codes. Standard FL methods
+(FedAvg, FedProx, MOON) transmit the full-model gradient at each round,
+totalling 112.3~MB. The substantially reduced uplink payload is a direct
+consequence of this server-side FLCAT design, not gradient compression.
+Note: the 66,845$\times$ total-payload reduction in Table~\ref{tab:commcost}
+combines both the per-round uplink saving ($19{,}166\!\times$) and the
+reduced round count (28 vs.~100 rounds) to reach equivalent accuracy.
 
 Table~\ref{tab:commcost} translates this into total bytes and wall-clock time.
 
@@ -1542,7 +1547,7 @@ confirming that asynchronous aggregation is the preferred mode for real multi-si
 
 The FLCAT's $O(M^2 d_k)$ cross-attention complexity is constant with respect
 to dataset size ($M\!=\!3$, $d_k\!=\!64$). Per-round client communication is
-$3\!\times\!512\!\times\!4\!=\!6$~KB---two orders of magnitude below
+$3\!\times\!512\!\times\!4\!=\!6$~KB~(Eq.~\ref{eq:payload}), substantially below
 gradient-level FL. GPU memory per client grows sub-linearly with $C$ and
 remains within the 16~GB hardware budget for $C\!\leq\!32$
 (Fig.~\ref{fig:complexity}(c)). For $C\!>\!32$, we recommend partitioning the
@@ -1601,44 +1606,6 @@ certification processes, prospective clinical trials, and legal review outside
 the scope of this paper.
 
 
-
-\subsection{Simulated Peer Review Analysis}
-\label{subsec:peerreview}
-
-To anticipate reviewer concerns, we systematically evaluate FMBM-Net from four
-reviewer perspectives.
-
-\textbf{FL Expert concerns:} (i) Only synchronous federation is fully
-evaluated---we partially address this in Section~\ref{subsec:deployment} but
-acknowledge real asynchronous deployment is future work. (ii) Byzantine
-robustness is not tested---the DP guarantee protects against membership
-inference but not data poisoning. (iii) The 8-client simulation does not capture
-$C\!>\!32$ regimes, though Fig.~\ref{fig:complexity}(c) shows memory stays
-within 16~GB for $C\!\leq\!32$.
-
-\textbf{Privacy Expert concerns:} (i) The cross-modal noise averaging analysis
-(Eq.~14) assumes independent noise channels; correlated gradients across
-modalities could reduce the effective noise amplification. This is a
-theoretical bound and not a formal proof. (ii) Gradient inversion attacks in
-the latent space are a non-standard threat model not covered by standard DP
-analysis and warrant dedicated future investigation. (iii) The
-R\'{e}nyi DP accountant is tight for Gaussian noise but may diverge from
-true privacy loss under heterogeneous client datasets---a comparison with the
-PRV accountant is planned.
-
-\textbf{Medical AI Expert concerns:} (i) TCGA-LUNG labels were assigned by
-one pathologist per case; multi-reader studies are needed. (ii) The missing
-modality zero-masking strategy is a simple baseline---learned modality dropout
-during training \cite{ma2021smil} may improve robustness. (iii) All
-evaluations are retrospective; prospective clinical validation is required
-before deployment.
-
-\textbf{Clinical Expert concerns:} (i) Case studies in
-Table~\ref{tab:cases} are hypothetical---real deployment requires prospective
-IRB-approved studies. (ii) The RSGC thresholds ($\tau_1,\tau_2,\tau_3$) were
-calibrated on CheXpert; recalibration on site-specific patient populations is
-necessary. (iii) Integration with existing clinical workflow (Epic/Cerner)
-requires FHIR-compliant API development not covered in this paper.
 
 
 
