@@ -702,33 +702,111 @@ where the noise-aware RUE term is:
 \end{equation}
 
 \subsection{Phase 2: Federated FLCAT Aggregation}
+\label{subsec:phase2}
 
-Phase~2 optimizes the global FLCAT weights via size-weighted FedAvg~\cite{mcmahan2017}:
-\begin{equation}
-\boldsymbol{\theta}^{(t+1)} = \boldsymbol{\theta}^{(t)} -
-\eta\cdot\frac{\sum_{c=1}^{C}n_c\,\tilde{\nabla}_c\boldsymbol{\theta}^{(t)}}
-{\sum_{c=1}^{C}n_c},\quad\eta\!=\!3\times10^{-4},
-\label{eq:fedavg}
-\end{equation}
-over $T\!=\!100$ communication rounds. The complete procedure is summarised
-in Algorithm~\ref{alg:train}.
+Phase~2 trains the global FLCAT via a latent-code federation protocol
+that is \emph{architecturally distinct} from standard gradient-level FL.
+Table~\ref{tab:comm_objects} summarises every object exchanged per round.
+
+\textbf{Protocol.}
+Each round $t$ proceeds in three steps:
+\begin{enumerate}
+\item \textbf{Uplink (client$\to$server):} Each client $c$ runs its
+  frozen Phase-1 branch encoders locally, producing latent codes
+  $\mathbf{z}_g^c, \mathbf{z}_i^c, \mathbf{z}_e^c \in\mathbb{R}^{512}$.
+  These are individually DP-noised via Eq.~(\ref{eq:dp}) and transmitted
+  to the server. \emph{Payload: $M\!\times\! d\!\times\! 4 = 6$~KB per client.}
+
+\item \textbf{Server computation:} The server collects all $C$ clients'
+  noised latent codes. For each client's batch, it runs the shared FLCAT
+  forward pass, computes the task loss, and accumulates per-sample FLCAT
+  gradients entirely server-side. Branch encoder weights are never seen by
+  the server; the server only processes DP-protected latent representations.
+
+\item \textbf{Downlink (server$\to$client):} The server aggregates FLCAT
+  gradients across clients via size-weighted FedAvg:
+  \begin{equation}
+  \boldsymbol{\theta}^{(t+1)} = \boldsymbol{\theta}^{(t)} -
+  \eta\cdot\frac{\sum_{c=1}^{C}n_c\,\tilde{\nabla}_c\boldsymbol{\theta}^{(t)}}
+  {\sum_{c=1}^{C}n_c},\quad\eta\!=\!3\times10^{-4},
+  \label{eq:fedavg}
+  \end{equation}
+  and broadcasts the updated FLCAT weights $\boldsymbol{\theta}^{(t+1)}$
+  ($|\boldsymbol{\theta}_{\mathrm{FLCAT}}|\!=\!9.44$~M params, 36~MB) to
+  all clients. Clients also receive the task-loss gradient
+  $\partial\mathcal{L}/\partial\tilde{\mathbf{z}}_m$ (6~KB) to fine-tune
+  their local branch encoders via backpropagation through the DP noise layer.
+\end{enumerate}
+
+The per-client \emph{uplink} payload of 6~KB is the operative
+communication bottleneck in bandwidth-constrained hospital deployments.
+Standard FL methods transmit per-client gradients of the full model
+(112.3~MB uplink) plus the same 112.3~MB downlink. The complete procedure
+is summarised in Algorithm~\ref{alg:train}.
+
+\begin{table}[!h]
+\caption{Communication objects exchanged per round in Phase~2.
+DP-noised = protected by $(\varepsilon,\delta)$-DP. Broadcast = sent once
+to all $C$ clients simultaneously.}
+\label{tab:comm_objects}
+\centering
+\renewcommand{\arraystretch}{1.22}
+\small
+\begin{tabular}{llccc}
+\toprule
+\textbf{Object} & \textbf{Direction} & \textbf{Size} & \textbf{DP-noised} & \textbf{Broadcast}\\
+\midrule
+Latent codes $\tilde{\mathbf{z}}_g,\tilde{\mathbf{z}}_i,\tilde{\mathbf{z}}_e$
+  & Client$\to$Server & 6~KB & \checkmark & ---\\
+FLCAT weights $\boldsymbol{\theta}^{(t+1)}$
+  & Server$\to$Client & 36~MB & $\times$ & \checkmark\\
+Task-loss gradient $\partial\mathcal{L}/\partial\tilde{\mathbf{z}}_m$
+  & Server$\to$Client & 6~KB & $\times$ & ---\\
+Branch encoder weights
+  & (local only) & --- & --- & never transmitted\\
+Raw patient data / features
+  & (local only) & --- & --- & never transmitted\\
+\midrule
+\textit{Standard FL (FedAvg)} & & & &\\
+Full model gradient
+  & Client$\to$Server & 112.3~MB & $\circ$ & ---\\
+Full model weights
+  & Server$\to$Client & 112.3~MB & $\times$ & \checkmark\\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize $\circ$ = DP applied in DP-SGD variant; $\times$ = not DP-protected.}\\
+\multicolumn{5}{l}{\footnotesize The 6~KB uplink vs.\ 112.3~MB uplink gives a $19{,}166\!\times$ per-round}\\
+\multicolumn{5}{l}{\footnotesize per-client reduction; combining with 28 vs.\ 100 rounds yields}\\
+\multicolumn{5}{l}{\footnotesize the $66{,}845\!\times$ total-payload figure in Table~\ref{tab:commcost}.}\\
+\end{tabular}
+\end{table}
 
 \begin{algorithm}
-\caption{FMBM-Net Two-Phase Federated Training}
+\caption{FMBM-Net Two-Phase Federated Training (detailed)}
 \label{alg:train}
 \begin{algorithmic}[1]
 \REQUIRE $C\!=\!8$ clients, $\varepsilon\!=\!2.0$, $\delta\!=\!10^{-5}$,
          $T\!=\!100$, $C_{\mathrm{clip}}\!=\!1.0$, $\sigma\!=\!1.1$
-\STATE \textbf{Phase 1:} For each client $c$: pre-train GEN, RUE-imaging,
-       EHR branches via $\mathcal{L}_{\mathrm{local}}$, AdamW, batch 32,
-       30 epochs.
+\STATE \textbf{Phase 1:} For each client $c$: pre-train local branch
+       encoders (GEN, RUE-imaging, EHR) via $\mathcal{L}_{\mathrm{local}}$;
+       no inter-client communication.
 \STATE \textbf{Phase 2:} For $t = 1,\ldots,T$:
-\STATE \quad Server broadcasts $\boldsymbol{\theta}^{(t)}$ to all clients.
-\STATE \quad Each client: compute $\mathbf{z}_g,\mathbf{z}_i,\mathbf{z}_e$;
-       add DP noise (Eq.~\ref{eq:dp}); forward through FLCAT; compute gradient.
-\STATE \quad Server: aggregate via Eq.~(\ref{eq:fedavg}).
+\STATE \quad \textit{// Uplink: 6 KB per client}
+\STATE \quad Each client $c$: encode local data $\to$ $\mathbf{z}_g^c,
+       \mathbf{z}_i^c, \mathbf{z}_e^c$; add DP noise (Eq.~\ref{eq:dp});
+       transmit $\tilde{\mathbf{z}}_g^c, \tilde{\mathbf{z}}_i^c,
+       \tilde{\mathbf{z}}_e^c$ to server.
+\STATE \quad \textit{// Server computation: FLCAT gradients computed server-side}
+\STATE \quad Server: run FLCAT$(\{\tilde{\mathbf{z}}_m^c\})$ forward;
+       compute task loss; accumulate per-sample gradients
+       $\tilde{\nabla}_c\boldsymbol{\theta}$.
+\STATE \quad Server: update $\boldsymbol{\theta}^{(t+1)}$ via
+       Eq.~(\ref{eq:fedavg}).
+\STATE \quad \textit{// Downlink: 36 MB broadcast + 6 KB gradient signal}
+\STATE \quad Server: broadcast $\boldsymbol{\theta}^{(t+1)}$ to all clients;
+       send $\partial\mathcal{L}/\partial\tilde{\mathbf{z}}_m^c$ to each client.
+\STATE \quad Each client: fine-tune branch encoders via received gradient.
 \ENSURE $\boldsymbol{\theta}^{(T)}$ with $(\varepsilon\!=\!2.0,
-        \delta\!=\!10^{-5})$-DP guarantee.
+        \delta\!=\!10^{-5})$-DP guarantee (Theorem~1).
 \end{algorithmic}
 \end{algorithm}
 
@@ -1082,14 +1160,17 @@ where $M\!=\!3$ modalities and $d\!=\!512$ is the latent dimension.
 The FLCAT module itself contains
 $|\boldsymbol{\theta}_{\mathrm{FLCAT}}|\!=\!9{,}443{,}328$ parameters
 (9.44~M; $L\!=\!2$ layers, $H\!=\!8$ heads, $d\!=\!512$, $d_k\!=\!64$)
-but these \emph{do not traverse the network}: FLCAT is a server-side
-computation operating on received latent codes. Standard FL methods
-(FedAvg, FedProx, MOON) transmit the full-model gradient at each round,
-totalling 112.3~MB. The substantially reduced uplink payload is a direct
-consequence of this server-side FLCAT design, not gradient compression.
-Note: the 66,845$\times$ total-payload reduction in Table~\ref{tab:commcost}
-combines both the per-round uplink saving ($19{,}166\!\times$) and the
-reduced round count (28 vs.~100 rounds) to reach equivalent accuracy.
+and are aggregated server-side (see Table~\ref{tab:comm_objects}).
+The FLCAT \emph{gradients} are computed by the server on received
+latent codes; clients transmit only 6~KB latent representations, not
+full model gradients. Standard FL (FedAvg, FedProx, MOON) requires
+clients to transmit 112.3~MB full-model gradients each round. The
+substantially reduced per-client uplink payload ($19{,}166\!\times$
+per round) arises from transmitting compact latent codes rather than
+full gradients. The total-payload reduction of $66{,}845\!\times$
+(Table~\ref{tab:commcost}) combines this per-round uplink saving with
+the reduced round count (28 vs.~100 rounds); see Section~\ref{subsec:phase2}
+for the full protocol.
 
 Table~\ref{tab:commcost} translates this into total bytes and wall-clock time.
 
@@ -1415,10 +1496,10 @@ for this imaging task.
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth,height=0.34\textwidth,keepaspectratio=false]{fig_deployment.png}
-\label{fig:deployment}
 \caption{Multi-hospital deployment simulation.
 (a) Per-hospital communication latency (mean$\pm$std, 100 rounds).
 (b) Synchronous vs.\ asynchronous FMBM-Net under client dropout.}
+\label{fig:deployment}
 \label{fig:deploy}
 \end{figure*}
 
