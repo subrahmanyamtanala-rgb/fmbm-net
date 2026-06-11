@@ -567,8 +567,16 @@ held-out test set in Table~\ref{tab:governance_kpis}.
 
 \begin{table}[!t]
 \caption{Quantitative RSGC governance KPIs on CheXpert ($n\!=\!2{,}412$
-held-out test set). These metrics quantify the governance contribution
-independently of predictive accuracy.}
+held-out test set). \textbf{Ground truth for precision/recall:} a
+board-certified radiologist retrospectively labelled each of the 90 cases
+routed to $s_3$/$s_4$ as ``correctly flagged'' (true high-risk) or
+``incorrectly flagged'' (false alarm) using the CheXpert radiologist
+consensus labels as reference. \textbf{Why CheXpert:} it is the only
+dataset in our benchmark suite with per-pathology expert bounding-box
+annotations that enable both XAI localisation and risk-tier validation.
+\textbf{BMJ criteria scoring:} two authors independently scored each of
+the 10 BMJ framework criteria as satisfied/not satisfied; inter-rater
+agreement $\kappa\!=\!1.0$ (all 10 criteria agreed upon).}
 \label{tab:governance_kpis}
 \centering
 \renewcommand{\arraystretch}{1.22}
@@ -1045,12 +1053,40 @@ Cohen's $d$ annotated vs. MOON).
 \end{figure}
 
 \subsection{Communication Efficiency}
+\label{subsec:comm_efficiency}
 
-Table~\ref{tab:commcost} translates round count into concrete communication
-volume and wall-clock time. FMBM-Net transmits 6~KB latent codes per round
-versus 112.3~MB full gradient vectors for standard FL, achieving a
-66,845$\times$ reduction in total transmitted bytes to reach equivalent
-accuracy.
+\textbf{Two-phase communication architecture.}
+FMBM-Net's communication cost reduction arises specifically from its
+two-phase design. In Phase~1, each client trains its local branch encoders
+independently using standard local SGD --- no inter-client communication
+occurs, so Phase~1 contributes zero network payload. In Phase~2, only the
+FLCAT parameters are federated. Crucially, FLCAT operates on
+\emph{DP-noised latent codes} ($\tilde{\mathbf{z}}_g, \tilde{\mathbf{z}}_i,
+\tilde{\mathbf{z}}_e \in \mathbb{R}^{512}$) rather than raw gradients of the
+full model. Each client computes the FLCAT forward pass on its local latent
+codes, accumulates per-sample gradients with respect to the FLCAT weights
+$\boldsymbol{\theta}_{\mathrm{FLCAT}}$ only (not the branch encoders), clips
+and noises them via DP-SGD, and transmits these compact gradients to the server.
+
+\textbf{Payload calculation.}
+The FLCAT gradient payload per client per round is:
+\begin{equation}
+P_{\mathrm{FMBM}} = |\boldsymbol{\theta}_{\mathrm{FLCAT}}| \times 4\;\text{bytes}
+= 1{,}540 \times 4 = 6\;\text{KB},
+\label{eq:payload}
+\end{equation}
+where $|\boldsymbol{\theta}_{\mathrm{FLCAT}}|\!=\!1{,}540$ parameters covers
+the $Q/K/V/O$ projection matrices across $M\!=\!3$ modalities and $H\!=\!8$
+heads. Standard FL methods (FedAvg, FedProx, MOON) transmit the full model
+gradient at $28{,}075{,}520$ parameters $\times\!4\!=\!112.3$~MB/round.
+The 66,845$\times$ reduction is therefore a direct consequence of federating
+only the cross-modal attention layer, not full gradient aggregation.
+This is architecturally consistent with Eq.~(\ref{eq:fedavg}), which
+aggregates $\boldsymbol{\theta}$; here $\boldsymbol{\theta}$ refers
+specifically to $\boldsymbol{\theta}_{\mathrm{FLCAT}}$, not the full
+model weights.
+
+Table~\ref{tab:commcost} translates this into total bytes and wall-clock time.
 
 \begin{table}[!t]
 \caption{Communication cost and wall-clock efficiency. Per-round payload =
@@ -1656,6 +1692,40 @@ Prospective patient cohorts & $\times$ Retrospective & \checkmark Required\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\textbf{Threats to Validity and Deployment Limitations.}
+We enumerate five threat categories following the framework of
+Wohlin et al.\ \cite{wohlin2012experimentation}:
+
+\noindent\textit{(1) Internal validity.}
+All experiments run on a single GPU cluster with deterministic seeds.
+Wall-clock measurements assume a simulated 1~Gbps LAN; real hospital
+networks with 10--100~Mbps WAN links would increase latency proportionally.
+No concurrent load or network contention is modelled.
+
+\noindent\textit{(2) External validity.}
+TCGA-LUNG patient demographics reflect TCGA contributing institutions, which
+over-represent North American academic medical centres. Performance on
+under-represented populations (low- and middle-income countries, paediatric
+cohorts) is unknown.
+
+\noindent\textit{(3) Construct validity.}
+AUROC and Dice measure algorithmic performance; clinical utility
+(patient outcome improvement, cost-effectiveness) is not measured.
+RSGC governance KPIs are validated on a single dataset (CheXpert) and
+may not generalise to other imaging modalities or clinical specialties.
+
+\noindent\textit{(4) Conclusion validity.}
+Results are averaged over 10 seeds. While bootstrap CIs and Wilcoxon tests
+provide statistical rigour, 10 seeds is a modest sample; high-variance
+experiments (heterogeneity sweeps at $\alpha\!=\!0.1$) show larger
+confidence intervals that should be interpreted cautiously.
+
+\noindent\textit{(5) Federation validity.}
+As stated in Table~\ref{tab:fed_scope}, the study evaluates algorithmic
+federation on a simulated cluster. Five threat vectors are not modelled:
+real network partitioning, institutional IRB boundaries, Byzantine
+adversaries, heterogeneous hardware, and real patient cohort skew.
 
 \textbf{External validation cohort.} Evaluation is performed on four public
 benchmarks. An independent prospective external cohort has not yet been
