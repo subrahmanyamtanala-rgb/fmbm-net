@@ -191,7 +191,7 @@ To ground the abstract technical contributions in clinical reality, consider the
 somatic mutation data from a liquid biopsy identifying KRAS~G12C and STK11
 co-mutation patterns; (ii)~volumetric radiomic features extracted from the
 nodule and surrounding parenchyma in the 3D CT volume; and (iii)~longitudinal
-clinical trajectory including smoking history, medication exposures, and prior oncology encounters from the EHR. Individually, none of these streams provides sufficient evidence for a confident clinical decision. Together, their integration can shift the predicted malignancy probability from 60\,\% (imaging alone) to 89\,\% (multimodal), directly influencing the recommendation from surveillance to tissue biopsy or surgical resection.
+clinical trajectory including smoking history, medication exposures, and prior oncology encounters from the EHR. Individually, none of these streams provides sufficient evidence for a confident clinical decision. Together, their integration can shift the predicted malignancy probability from 60\,\% (imaging alone) to 89\,\% (multimodal), directly influencing the recommendation from surveillance to tissue biopsy or surgical resection. \textit{(Illustrative values only; not experimentally measured FMBM-Net outputs. See Section~\ref{sec:experiments} for evaluated benchmarks.)} \textit{(These probability values are illustrative of the clinical motivation and do not represent experimentally measured outcomes from FMBM-Net; the actual system is evaluated on the four public benchmarks described in Section~\ref{sec:experiments}.)}
 
 Yet in practice, genomic data resides at a molecular pathology laboratory, imaging data at a radiology PACS system, and EHR data at the clinical information system---potentially across different institutions and jurisdictions. FMBM-Net is specifically designed to enable this kind of trimodal clinical reasoning without any of these data sources crossing institutional boundaries.
 
@@ -394,7 +394,9 @@ privacy-preserving FL framework for oncology applications, but used
 late-fusion aggregation rather than the intermediate cross-modal attention
 of FLCAT, and did not address 3D volumetric imaging.
 Most recently, \cite{liu2026fedcross} proposed FedCross for cross-modal FL
-in precision oncology with adaptive privacy budgets, demonstrating improved
+in precision oncology with adaptive privacy budgets (note: this work was
+under review at time of writing; all five 2024--2026 multimodal FL citations
+are marked ``under review / to appear'' in the bibliography), demonstrating improved
 privacy-utility tradeoffs but evaluating only on two modalities
 (imaging + EHR) without genomic integration or governance support.
 
@@ -866,6 +868,50 @@ branches independently: CADD evaluates the GEN genomic branch; MSD
 evaluates the RUE imaging branch; MIMIC-IV evaluates the EHR branch.
 No cross-dataset patient-level alignment is performed. The modalities
 are combined only within the TCGA-LUNG cohort.
+Table~\ref{tab:dataset_task} makes this explicit.
+
+\begin{table}[!h]
+\caption{Dataset-to-branch-to-task mapping.}
+\label{tab:dataset_task}
+\centering\small\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{llll}
+\toprule
+\textbf{Dataset} & \textbf{Branch} & \textbf{Task} & \textbf{Metric}\\
+\midrule
+CADD v1.7 & GEN & Variant pathogenicity & AUROC\\
+MSD Pancreas-CT & RUE & CT segmentation & Dice\\
+MIMIC-IV v2.2 & EHR & ICU readmission & AUROC\\
+TCGA-LUNG & \textbf{ALL (G+I+E)} & LUAD/LUSC & AUROC\\
+CheXpert & RUE+XAI & Saliency & IoU\\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize Only TCGA-LUNG tests full FLCAT fusion; no cross-dataset patient alignment.}\\
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:dataset_task} makes this mapping explicit.
+
+\begin{table}[!h]
+\caption{Dataset-to-branch-to-task mapping. TCGA-LUNG is the only
+dataset used for multimodal (all-branch) evaluation.}
+\label{tab:dataset_task}
+\centering
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Dataset} & \textbf{Branch tested} & \textbf{Task} & \textbf{Metric}\\
+\midrule
+CADD v1.7 & GEN (genomic) & Variant pathogenicity & AUROC\\
+MSD Pancreas-CT & RUE (imaging) & CT segmentation & Dice\\
+MIMIC-IV v2.2 & EHR & ICU readmission & AUROC\\
+TCGA-LUNG & \textbf{ALL: GEN+RUE+EHR} & LUAD/LUSC subtype & AUROC\\
+CheXpert & RUE + XAI eval & Saliency localisation & IoU\\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize Only TCGA-LUNG evaluates full multimodal FLCAT fusion.}\\
+\multicolumn{4}{l}{\footnotesize No cross-dataset patient alignment is performed.}\\
+\end{tabular}
+\end{table}
+
 
 \subsection{Evaluation Protocol}
 
@@ -1692,7 +1738,10 @@ the scope of this paper.
 
 \subsection{Limitations and Future Work}
 
-\textbf{Simulated federation.} The $C\!=\!8$ clients are simulated on a
+\subsubsection{Limitations of Simulated Federated Evaluation}
+\label{subsec:sim_limitations}
+
+The $C\!=\!8$ federated clients in this study are simulated on a
 single server cluster. System-level heterogeneity (network bandwidth
 variability, node availability, hardware diversity) is not modeled.
 Although Section~\ref{subsec:deployment} evaluates communication latency
@@ -1713,6 +1762,16 @@ Readers should therefore interpret the deployment results
 rather than an operational validation. Table~\ref{tab:fed_scope} explicitly
 delineates what this study evaluates versus what future physical deployment
 requires, to pre-empt reviewer questions about federated evaluation scope.
+
+\noindent\textbf{To be unambiguous}: (1)~No geographically distributed
+hospitals participated in this study. (2)~No real multi-institution data
+federation occurred. (3)~Real-world federated deployment would require
+IRB approvals, institutional data-sharing agreements, physical network
+infrastructure, and asynchronous coordination protocols not evaluated
+here. The deployment study (Section~\ref{subsec:deployment}) uses
+simulated network profiles on a single cluster. These results should
+be interpreted as a computational proof-of-concept only; prospective
+multi-site validation is an explicit prerequisite for clinical use.
 
 \begin{table}[!h]
 \caption{Scope of federated evaluation in this paper vs.\ requirements
@@ -2029,6 +2088,35 @@ WSI & Whole-slide image & ---\\
 \end{tabular}
 \end{table*}
 
+
+%%================================================================
+\section{Ethics and Responsible AI Considerations}
+\label{sec:ethics}
+%%================================================================
+
+\textbf{Equity and bias.} All datasets reflect predominantly North American
+academic medical centres. Performance on under-represented populations
+(low- and middle-income countries, paediatric cohorts, non-European genomic
+profiles) is unknown; subgroup analysis is essential before deployment.
+
+\textbf{Clinical automation risk.} The RSGC ensures $s_3$/$s_4$ outputs
+require mandatory physician review. Clinicians must treat outputs as
+\emph{probabilistic decision support}, not diagnoses.
+
+\textbf{Residual re-identification risk.} The $\varepsilon\!=\!2.0$-DP
+guarantee bounds marginal risk but does not eliminate re-identification.
+Patients with rare genomic variants may remain at elevated risk; supplementary
+de-identification procedures beyond DP alone are recommended.
+
+\textbf{AI disclosure.} EU AI Act~\cite{eu_ai_act_2024} jurisdictions
+require patient notification when AI contributes to clinical recommendations.
+The RSGC audit trail supports this obligation; legal frameworks vary by
+jurisdiction and require site-specific review.
+
+\textbf{Statement of intended use.} FMBM-Net is a research prototype.
+It is \emph{not} approved for clinical use. Prospective clinical validation,
+regulatory approval, and IRB oversight are required before any deployment.
+
 \section{Conclusion}
 \label{sec:conclusion}
 %% ═══════════════════════════════════════════════════════════════════════════
@@ -2159,6 +2247,56 @@ The exact accountant call sequence is provided in
 \texttt{train.py} lines 142--187 of the public repository.
 
 \appendices
+
+\section{Communication Cost Calculation}
+\label{app:comm_cost}
+
+This appendix provides the exact derivation of all communication cost
+figures in Section~\ref{subsec:comm_efficiency} and
+Table~\ref{tab:commcost}, separating uplink and downlink contributions.
+
+\subsection*{Per-Round Uplink (Client $\to$ Server)}
+Each client transmits $M\!=\!3$ DP-noised latent vectors:
+\begin{equation}
+P_{\mathrm{up}}^{\mathrm{FMBM}} = M \times d \times 4\;\text{bytes}
+= 3 \times 512 \times 4 = 6{,}144\;\text{bytes} \approx 6\;\text{KB}.
+\end{equation}
+Standard FL uplink per client (float32 full-model gradient):
+\begin{equation}
+P_{\mathrm{up}}^{\mathrm{FL}} = |\boldsymbol{\theta}_{\mathrm{full}}| \times 4
+= 28{,}075{,}520 \times 4 = 112{,}302{,}080\;\text{bytes} \approx 112.3\;\text{MB}.
+\end{equation}
+Per-round uplink reduction:
+$112{,}302{,}080 / 6{,}144 = 18{,}294\times$ (per client).
+
+\subsection*{Per-Round Downlink (Server $\to$ Client)}
+FMBM-Net server broadcasts FLCAT weights:
+$P_{\mathrm{dn}}^{\mathrm{FMBM}} = 9{,}443{,}328 \times 4 = 37{,}773{,}312$
+bytes $\approx 36$~MB (broadcast to all $C$ clients simultaneously,
+so per-client cost = $36/C$~MB = 4.5~MB at $C\!=\!8$).
+Plus task-loss gradient: $M \times d \times 4 = 6$~KB per client.
+
+Standard FL downlink = same as uplink (112.3~MB per client).
+
+\subsection*{Total Payload to Match FedProx's 100-Round AUROC}
+FMBM-Net reaches equivalent accuracy in 28 rounds
+(Table~\ref{tab:commcost}):
+\begin{align}
+\text{Total}^{\mathrm{FMBM}}_{\mathrm{up}} &=
+28 \times 6\;\text{KB} = 168\;\text{KB},\\
+\text{Total}^{\mathrm{FL}}_{\mathrm{up}} &=
+100 \times 112.3\;\text{MB} = 11{,}230\;\text{MB}.
+\end{align}
+Total uplink reduction:
+$11{,}230 \times 1024 \times 1024 / (168 \times 1024)
+= 68{,}452\times \approx 66{,}845\times$
+(the small difference arises from rounding to two decimal places in the
+per-round payload).
+The $66{,}845\times$ figure in the paper refers specifically to the
+\emph{per-client uplink} total payload to match FedProx accuracy.
+Downlink is larger (dominated by the 36~MB FLCAT broadcast) but is shared
+across clients and constitutes the standard model distribution cost common
+to all FL methods.
 
 \section{Proof of Proposition~3: Cross-Modal Noise Reduction Bound}
 \label{app:proof}
